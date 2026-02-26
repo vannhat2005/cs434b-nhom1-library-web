@@ -32,11 +32,12 @@
         <div v-for="book in filteredBooks" :key="book.id" class="book-card">
           <div class="card-img-wrapper">
              <img :src="book.img" alt="Book Cover" class="book-img" />
-             <span class="tag" :class="book.categoryClass">{{ book.category }}</span>
+             <span v-if="book.category" class="tag" :class="book.categoryClass">{{ book.category }}</span>
           </div>
           <div class="book-info">
             <h3 class="book-title">{{ book.title }}</h3>
             <p class="book-author">{{ book.author }}</p>
+            
             <div class="stars">
               <span v-for="n in 5" :key="n" :class="{ 'gold': n <= book.stars, 'gray': n > book.stars }">★</span>
             </div>
@@ -100,11 +101,13 @@
 
   </div>
 </template>
+
 <script>
 export default {
-    
+  
 }
 </script>
+
 <style scoped>
 /* --- 1. LAYOUT CHUNG --- */
 .home-container {
@@ -116,7 +119,7 @@ export default {
 
 /* --- 2. HEADER & SEARCH --- */
 .header-section {
-  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); /* Màu tối sang trọng */
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
   color: white;
   padding: 40px 20px;
   border-radius: 12px;
@@ -164,6 +167,7 @@ export default {
   color: #333;
   border-left: 5px solid #2c3e50;
   padding-left: 15px;
+  font-size: 22px;
 }
 
 .book-grid {
@@ -203,6 +207,7 @@ export default {
 .book-author { font-size: 14px; color: #7f8c8d; margin-bottom: 8px; }
 
 .stars { margin-bottom: 15px; color: #f1c40f; }
+.stars .gold { color: #f1c40f; }
 .stars .gray { color: #ddd; }
 
 .btn-borrow-card {
@@ -217,7 +222,7 @@ export default {
 
 .no-result { text-align: center; padding: 40px; color: #7f8c8d; font-size: 18px; }
 
-/* --- 4. MODAL STYLE (Thiết kế form đỏ/trắng) --- */
+/* --- 4. MODAL STYLE --- */
 .modal-overlay {
   position: fixed; top: 0; left: 0;
   width: 100%; height: 100%;
