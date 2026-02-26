@@ -31,7 +31,7 @@ class UpdateBookRequest extends FormRequest
             'publication_year' => 'nullable|integer',
 
             'quantity' => 'required|integer',
-            'available' => 'required|integer',
+            // 'available' => 'required|integer|lte:quantity',
             'status' => 'required|integer|in:1,2',
         ];
     }
@@ -60,8 +60,9 @@ class UpdateBookRequest extends FormRequest
             'quantity.required' => 'Số lượng không được để trống.',
             'quantity.integer' => 'Số lượng phải là một số nguyên.',
 
-            'available.required' => 'Số lượng có sẵn không được để trống.',
-            'available.integer' => 'Số lượng có sẵn phải là một số nguyên.',
+            // 'available.required' => 'Số lượng có sẵn không được để trống.',
+            // 'available.integer' => 'Số lượng có sẵn phải là một số nguyên.',
+            // 'available.lte' => 'Số lượng có sẵn không được lớn hơn số lượng.',
 
             'status.required' => 'Trạng thái không được để trống.',
             'status.integer' => 'Trạng thái phải là một số nguyên.',

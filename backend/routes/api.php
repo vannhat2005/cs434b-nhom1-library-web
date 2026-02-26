@@ -15,6 +15,9 @@ Route::post('/librarian/sach/add-data', [BookController::class, 'addDataSach']);
 Route::post('/librarian/sach/update-data/{book}', [BookController::class, 'updateDataSach']);
 Route::delete('/librarian/sach/delete-data/{book}', [BookController::class, 'deleteDataSach']);
 Route::post('/librarian/sach/search', [BookController::class, 'searchSach']);
+Route::get('/librarian/category/get-data', [BookController::class, 'getAllCategory']);
+Route::get('/librarian/author/get-data', [BookController::class, 'getAllAuthor']);
+
 
 Route::get('/librarian/borrow-request/get-data', [BorrowRequestController::class, 'getAllBorrowRequest']);
 Route::post('/librarian/borrow-request/update-data/{borrowRequest}', [BorrowRequestController::class, 'approveBorrowRequest']);
