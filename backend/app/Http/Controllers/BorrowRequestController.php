@@ -11,7 +11,11 @@ class BorrowRequestController extends Controller
     public function getAllBorrowRequest()
     {
         // Lấy tất cả các yêu cầu mượn sách từ cơ sở dữ liệu
-        $borrowRequests = BorrowRequest::all();
+        $borrowRequests = BorrowRequest::join('users', 'users.id', '=', 'borrow_requests.user_id')
+            ->join('books', 'books.id', '=', 'borrow_requests.book_id')
+            ->select('borrow_requests.*', 'users.full_name as user_name', 'books.title as book_title')
+            ->orderBy('borrow_requests.created_at', 'asc')
+            ->get();
 
         return response()->json([
             'status' => true,
