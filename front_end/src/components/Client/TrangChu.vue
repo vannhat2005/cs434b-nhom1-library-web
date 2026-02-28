@@ -1,287 +1,593 @@
 <template>
-  <div class="home-container">
-    
-    <div class="header-section">
-      <div class="welcome-text">
-        <h1>Thư Viện Trực Tuyến</h1>
-        <p>Tìm kiếm và gửi yêu cầu mượn sách nhanh chóng.</p>
+  <div class="home-page">
+    <!-- Banner -->
+    <div class="hero">
+      <div class="hero-title">Chào mừng đến với Thư viện</div>
+      <div class="hero-sub">Khám phá và mượn sách yêu thích của bạn</div>
+    </div>
+
+    <!-- Section Head -->
+    <div class="section-head">
+      <div class="section-left">
+        <span class="star">★</span>
+        <h2 class="section-title">Sách nổi bật</h2>
       </div>
-      
-      <div class="search-wrapper">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="Nhập tên sách hoặc tác giả để tìm..." 
-          class="search-input"
-        />
-        <button class="search-btn">🔍</button>
+
+      <!-- Badges -->
+      <div class="badge-row">
+        <button class="badge" :class="{ active: selectedCategory === 'all' }" @click="selectCategory('all')">
+          Tất cả
+        </button>
+
+        <button v-for="c in categories" :key="c.id" class="badge" :class="{ active: selectedCategory === c.id }"
+          @click="selectCategory(c.id)">
+          {{ c.name }}
+        </button>
       </div>
     </div>
 
-    <div class="content-section">
-      <h2 class="section-title">
-        <span v-if="!searchQuery">📚 Sách nổi bật</span>
-        <span v-else>🔎 Kết quả tìm kiếm cho: "{{ searchQuery }}"</span>
-      </h2>
-      
-      <div v-if="filteredBooks.length === 0" class="no-result">
-        <p>Không tìm thấy cuốn sách nào phù hợp!</p>
+    <!-- Loading -->
+    <div v-if="loadingBooks" class="loading-wrap">
+      <div class="loading-card" v-for="i in 6" :key="i">
+        <div class="sk-img"></div>
+        <div class="sk-line w-80"></div>
+        <div class="sk-line w-55"></div>
+        <div class="sk-line w-65"></div>
+        <div class="sk-btn"></div>
       </div>
+    </div>
 
-      <div v-else class="book-grid">
-        <div v-for="book in filteredBooks" :key="book.id" class="book-card">
-          <div class="card-img-wrapper">
-             <img :src="book.img" alt="Book Cover" class="book-img" />
-             <span v-if="book.category" class="tag" :class="book.categoryClass">{{ book.category }}</span>
+    <!-- Grid books -->
+    <div v-else class="books-grid">
+      <div v-for="b in books" :key="b.id" class="book-card">
+        <div class="book-image">
+          <img :src="b.image" alt="" />
+          <span class="chip" :class="chipClass(b.category_id)">
+            {{ categoryName(b.category_id) }}
+          </span>
+        </div>
+
+        <div class="book-body">
+          <div class="book-title">{{ b.title }}</div>
+
+          <!-- Vì API hiện tại không join authors, nên chỉ có author_id -->
+          <div class="book-author">
+            {{ b.author_name }}
           </div>
-          <div class="book-info">
-            <h3 class="book-title">{{ book.title }}</h3>
-            <p class="book-author">{{ book.author }}</p>
-            
-            <div class="stars">
-              <span v-for="n in 5" :key="n" :class="{ 'gold': n <= book.stars, 'gray': n > book.stars }">★</span>
-            </div>
-            
-            <button @click="openModal(book)" class="btn-borrow-card">
-              📖 Yêu cầu mượn
-            </button>
+
+          <!-- rating demo (chưa có backend) -->
+          <div class="stars">
+            <i class="fa-solid fa-star" v-for="i in 5" :key="i" :class="{ off: i > 4 }"></i>
           </div>
+
+          <button class="borrow-btn" type="button" data-bs-toggle="modal" data-bs-target="#addModal"
+            v-on:click="Object.assign(add_request, b)">
+            <i class="fa-solid fa-book me-2"></i>
+            Yêu cầu mượn
+          </button>
         </div>
       </div>
-    </div>
 
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-content scale-in">
-        
+      <div v-if="books.length === 0" class="empty">
+        Không có sách phù hợp.
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Yêu cầu mượn sách -->
+  <div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered custom-modal">
+      <div class="modal-content borrow-modal">
         <div class="modal-header">
-          <h3>GỬI YÊU CẦU MƯỢN SÁCH</h3>
-          <span class="close-icon" @click="closeModal">&times;</span>
+          <h5 class="modal-title">Xác nhận yêu cầu mượn sách</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
-          <div class="selected-book-info" v-if="selectedBook">
-            Bạn đang chọn mượn: <strong>{{ selectedBook.title }}</strong>
+          <!-- Thông tin sách -->
+          <div class="info-box">
+            <div class="info-label">Thông tin sách:</div>
+            <div class="info-v fw-bold">{{ add_request.title }}</div>
+            <!-- Tác giả -->
+            <div class="info-label">Tác giả:</div>
+            <div class="info-v fw-bold">{{ add_request.author_name }}</div>
           </div>
 
-          <form @submit.prevent="submitRequest">
-            <div class="form-group">
-              <label>Số lượng:</label>
-              <input type="number" v-model="form.quantity" min="1" max="3" class="form-control" required>
-            </div>
 
-            <div class="form-group">
-              <label>Ngày mượn:</label>
-              <input type="date" v-model="form.borrowDate" class="form-control" required>
+          <!-- Thời hạn mượn -->
+          <div class="deadline-box">
+            <div class="deadline-icon">
+              <i class="fa-regular fa-calendar"></i>
             </div>
-
-            <div class="form-group">
-              <label>Ngày trả dự kiến:</label>
-              <input type="date" v-model="form.returnDate" class="form-control" required>
+            <div class="deadline-text">
+              <span class="muted">Thời hạn mượn:</span>
+              <span class="fw-bold"> 14 ngày</span>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label>Ghi chú:</label>
-              <textarea 
-                v-model="form.note" git branch
-                class="form-control" 
-                rows="3" 
-                placeholder="Nhập ghi chú (nếu có)..."></textarea>
-            </div>
+          <!-- Cảnh báo -->
+          <div class="warn-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Vui lòng trả sách đúng hạn để tránh bị phạt</span>
+          </div>
+        </div>
 
-            <div class="modal-actions">
-              <button type="submit" class="btn-submit">[ Gửi yêu cầu ]</button>
-              <button type="button" @click="closeModal" class="btn-cancel">[ Hủy ]</button>
-            </div>
-          </form>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light btn-cancel" data-bs-dismiss="modal">
+            Hủy
+          </button>
 
-          <p class="footer-note">* Yêu cầu sẽ được thủ thư duyệt trong 24h *</p>
+          <button type="button" class="btn btn-primary btn-confirm  " @click="requestBook">
+            Xác nhận mượn
+          </button>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <script>
+import axios from "axios";
+
 export default {
-  
-}
+  name: "Home",
+  data() {
+    return {
+      selectedCategory: "all",
+      categories: [],
+      books: [],
+      loadingBooks: false,
+      loadingCats: false,
+      add_request: {},
+
+      API_BASE: "http://127.0.0.1:8000/api",
+
+    };
+  },
+
+  mounted() {
+    this.init();
+  },
+
+  methods: {
+    async init() {
+      await this.getCategories();
+      await this.getBooks(); // load all
+    },
+
+    async getCategories() {
+      try {
+        this.loadingCats = true;
+        const res = await axios.get(`${this.API_BASE}/student/home/categories`);
+        this.categories = res.data?.data || [];
+      } catch (e) {
+        console.error("Lỗi load categories:", e);
+      } finally {
+        this.loadingCats = false;
+      }
+    },
+
+    async getBooks(categoryId = null) {
+      try {
+        this.loadingBooks = true;
+
+        const res = await axios.get(`${this.API_BASE}/student/home/books`, {
+          params: categoryId ? { category_id: categoryId } : {},
+        });
+
+        this.books = res.data?.data || [];
+      } catch (e) {
+        console.error("Lỗi load books:", e);
+      } finally {
+        this.loadingBooks = false;
+      }
+    },
+
+    selectCategory(id) {
+      this.selectedCategory = id;
+
+      if (id === "all") this.getBooks();
+      else this.getBooks(id);
+    },
+
+    categoryName(categoryId) {
+      const c = this.categories.find((x) => x.id === categoryId);
+      return c ? c.name : "Khác";
+    },
+
+    chipClass(categoryId) {
+      // đổi màu nhẹ theo category_id
+      if (categoryId === 1) return "chip-new";
+      if (categoryId === 2) return "chip-skill";
+      if (categoryId === 3) return "chip-novel";
+      return "chip-biz";
+    },
+
+    requestBook() {
+
+    },
+  },
+};
 </script>
 
 <style scoped>
-/* --- 1. LAYOUT CHUNG --- */
-.home-container {
-  padding: 20px;
-  background-color: #f0f2f5;
-  min-height: 100vh;
-  font-family: 'Segoe UI', sans-serif;
+.home-page {
+  padding: 18px 22px;
 }
 
-/* --- 2. HEADER & SEARCH --- */
-.header-section {
-  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-  color: white;
-  padding: 40px 20px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+/* Banner */
+.hero {
+  border-radius: 14px;
+  padding: 18px 18px;
+  color: #fff;
+  background: linear-gradient(90deg, #5b3df5, #8a2be2);
+  margin-bottom: 18px;
 }
 
-.welcome-text h1 { margin: 0; font-size: 2.5em; }
-.welcome-text p { margin-top: 10px; opacity: 0.9; }
+.hero-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
 
-.search-wrapper {
-  margin-top: 20px;
+.hero-sub {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Section header */
+.section-head {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.section-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star {
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* Badges */
+.badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #111;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.badge.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+/* Grid */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .books-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .books-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Card */
+.book-card {
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #eef2f7;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.book-image {
+  position: relative;
+  height: 120px;
+  background: #f3f4f6;
+}
+
+.book-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Category chip */
+.chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.chip-new {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.chip-skill {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.chip-novel {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.chip-biz {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Body */
+.book-body {
+  padding: 12px 12px 14px;
+}
+
+.book-title {
+  font-weight: 900;
+  font-size: 13.5px;
+  margin-bottom: 2px;
+  color: #0f172a;
+}
+
+.book-author {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.stars {
+  font-size: 12px;
+  margin-bottom: 10px;
+  color: #f59e0b;
+}
+
+.stars .off {
+  color: #e5e7eb;
+}
+
+/* Borrow button */
+.borrow-btn {
+  width: 100%;
+  border: none;
+  background: #0f172a;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.borrow-btn:hover {
+  opacity: 0.92;
+}
+
+/* Empty */
+.empty {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px dashed #e5e7eb;
+  padding: 16px;
+  border-radius: 12px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Loading skeleton */
+.loading-wrap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .loading-wrap {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .loading-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.loading-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #eef2f7;
+  padding: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.sk-img {
+  height: 120px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f1f5f9, #e5e7eb, #f1f5f9);
+  background-size: 200% 100%;
+  animation: sk 1.2s infinite;
+  margin-bottom: 12px;
+}
+
+.sk-line {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1f5f9, #e5e7eb, #f1f5f9);
+  background-size: 200% 100%;
+  animation: sk 1.2s infinite;
+  margin-bottom: 10px;
+}
+
+.sk-btn {
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f1f5f9, #e5e7eb, #f1f5f9);
+  background-size: 200% 100%;
+  animation: sk 1.2s infinite;
+  margin-top: 6px;
+}
+
+.w-80 {
+  width: 80%;
+}
+
+.w-65 {
+  width: 65%;
+}
+
+.w-55 {
+  width: 55%;
+}
+
+@keyframes sk {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.borrow-modal {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.info-box {
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.info-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.info-k {
+  width: 80px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.info-v {
+  flex: 1;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.deadline-box {
+  margin-top: 12px;
+  background: #eef6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.search-input {
-  width: 100%;
-  max-width: 500px;
-  padding: 12px 20px;
-  border-radius: 30px;
-  border: none;
-  font-size: 16px;
-  outline: none;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.search-btn {
-  background: #ff9f43;
-  border: none;
-  border-radius: 50%;
-  width: 45px;
-  height: 45px;
-  cursor: pointer;
-  font-size: 20px;
-  transition: transform 0.2s;
-}
-.search-btn:hover { transform: scale(1.1); }
-
-/* --- 3. GRID SÁCH --- */
-.section-title {
-  margin-bottom: 20px;
-  color: #333;
-  border-left: 5px solid #2c3e50;
-  padding-left: 15px;
-  font-size: 22px;
-}
-
-.book-grid {
+.deadline-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 25px;
+  place-items: center;
+  background: #dbeafe;
+  color: #2563eb;
 }
 
-.book-card {
-  background: white;
+.deadline-text {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.warn-box {
+  margin-top: 12px;
+  background: #f4e174;
+  border: 1px solid #fed7aa;
   border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  transition: all 0.3s ease;
+  padding: 12px 14px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
 }
-
-.book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
-
-.card-img-wrapper { position: relative; height: 280px; overflow: hidden; }
-.book-img { width: 100%; height: 100%; object-fit: cover; }
-
-.tag {
-  position: absolute; top: 10px; right: 10px;
-  padding: 5px 10px; border-radius: 20px;
-  font-size: 11px; color: white; font-weight: bold; text-transform: uppercase;
-}
-.tag-science { background: #3498db; }
-.tag-skill { background: #2ecc71; }
-.tag-novel { background: #9b59b6; }
-.tag-biz { background: #f1c40f; color: #333; }
-.tag-life { background: #e74c3c; }
-
-.book-info { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
-.book-title { font-size: 17px; margin: 0 0 5px; color: #2c3e50; font-weight: 700; }
-.book-author { font-size: 14px; color: #7f8c8d; margin-bottom: 8px; }
-
-.stars { margin-bottom: 15px; color: #f1c40f; }
-.stars .gold { color: #f1c40f; }
-.stars .gray { color: #ddd; }
-
-.btn-borrow-card {
-  margin-top: auto;
-  width: 100%; padding: 10px;
-  background-color: #2c3e50; color: white;
-  border: none; border-radius: 6px;
-  cursor: pointer; font-weight: 600;
-  transition: background 0.3s;
-}
-.btn-borrow-card:hover { background-color: #34495e; }
-
-.no-result { text-align: center; padding: 40px; color: #7f8c8d; font-size: 18px; }
-
-/* --- 4. MODAL STYLE --- */
-.modal-overlay {
-  position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 2000;
-}
-
-.modal-content {
-  background: white;
-  width: 90%; max-width: 500px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-}
-
-.modal-header {
-  padding: 20px; text-align: center;
-  border-bottom: 1px solid #eee; position: relative;
-}
-.modal-header h3 { margin: 0; color: #e74c3c; font-weight: 800; text-transform: uppercase; }
-.close-icon { position: absolute; right: 15px; top: 15px; font-size: 28px; cursor: pointer; color: #aaa; }
-.close-icon:hover { color: #e74c3c; }
-
-.modal-body { padding: 25px; }
-
-.selected-book-info {
-  background: #fff3f3; color: #c0392b;
-  padding: 10px; border-radius: 5px; margin-bottom: 20px;
-  text-align: center; border: 1px dashed #e74c3c;
-}
-
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 14px; }
-.form-control {
-  width: 100%; padding: 10px;
-  border: 1px solid #ccc; border-radius: 5px;
-  font-size: 14px; box-sizing: border-box;
-}
-.form-control:focus { outline: none; border-color: #e74c3c; box-shadow: 0 0 5px rgba(231, 76, 60, 0.2); }
-
-.modal-actions { display: flex; gap: 15px; margin-top: 25px; }
-.btn-submit {
-  flex: 1; padding: 12px;
-  background: #e74c3c; color: white;
-  border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
-}
-.btn-submit:hover { background: #c0392b; }
 
 .btn-cancel {
-  flex: 1; padding: 12px;
-  background: #f1f2f6; color: #555;
-  border: 1px solid #ddd; border-radius: 5px; font-weight: bold; cursor: pointer;
+  border-radius: 10px;
+  font-weight: 700;
+  padding: 10px 30px;
 }
-.btn-cancel:hover { background: #e1e2e6; }
 
-.footer-note { margin-top: 20px; text-align: center; font-size: 12px; color: #999; font-style: italic; }
-
-/* Animation */
-.scale-in { animation: scaleIn 0.25s ease-out; }
-@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.btn-confirm {
+  border-radius: 10px;
+  font-weight: 800;
+  padding: 10px 30px;
+}
+.modal-footer {
+  justify-content: center !important;
+}
+custom-modal {
+  max-width: 300px;
+}
 </style>

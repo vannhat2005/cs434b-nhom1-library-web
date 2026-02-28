@@ -27,7 +27,9 @@ Route::post('/librarian/borrow-request/reject-data/{borrowRequest}', [BorrowRequ
 Route::get('/student/home/books', [HomeController::class, 'getDataClientSachByCategory']);
 Route::get('/student/home/categories', [HomeController::class, 'getDataClientCategory']);
 Route::post('/student/borrow-request/add-data', [HomeController::class, 'addBorrowRequest']);
+Route::post('/student/books/search', [HomeController::class, 'searchBooks']);
 
 //Admin
 Route::get('/admin/thongke/summary', [ThongKeController::class, 'getSummaryData']);
 Route::get('/admin/thongke/recent-borrow', [ThongKeController::class, 'getRecentBorrowData']);
+

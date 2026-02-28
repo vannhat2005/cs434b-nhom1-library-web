@@ -10,6 +10,7 @@
 import ClientLayout from './layout/wrapper/client.vue';
 import AdminLayout from './layout/wrapper/admin.vue';
 import LibrarianLayout from './layout/wrapper/librarian.vue';
+import Blank from './layout/wrapper/blank.vue';
 
 
 export default {
@@ -21,12 +22,11 @@ export default {
         return AdminLayout;
       } else if (layout === 'librarian') {
         return LibrarianLayout;
-      } else if (layout === 'blank')
-        return 'div';
-      else {
+      } else if (layout === 'client')
         return ClientLayout;
+      else {
+        return Blank;
       }
-
     }
   }
 }

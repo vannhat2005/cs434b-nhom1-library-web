@@ -7,33 +7,33 @@
     <div class="search-form">
       <div class="form-group">
         <label>Tên sách</label>
-        <input type="text" placeholder="Nhập tên sách" />
+        <input v-model="searchParams.title" type="text" placeholder="Nhập tên sách" />
       </div>
 
-    <div class="form-group">
-      <label>Tác giả:</label>
-      <input type="text" placeholder="Nhập tên tác giả" />
-    </div>
+      <div class="form-group">
+        <label>Tác giả:</label>
+        <input v-model="searchParams.author" type="text" placeholder="Nhập tên tác giả" />
+      </div>
 
       <div class="form-group">
-      <label>Thể loại:</label>
-      <select>
-        <option>Chọn thể loại</option>
-        <option>CNTT</option>
-        <option>Văn học</option>
-        <option>Khoa học</option>
-      </select>
-    </div>
+        <label>Thể loại:</label>
+        <select v-model="searchParams.category_id">
+          <option value="">-- Chọn thể loại --</option>
+          <option v-for="category in list_category" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
 
       <div class="form-group">
         <label>Năm xuất bản</label>
-        <input type="number" placeholder="Nhập năm" />
+        <input v-model="searchParams.publication_year" type="number" placeholder="Nhập năm" />
       </div>
 
       <!-- BUTTON -->
       <div class="button-group">
-        <button class="btn-search">Tìm kiếm</button>
-        <button class="btn-reset">Làm mới</button>
+        <button class="btn-search" @click="searchBooks">Tìm kiếm</button>
+        <button class="btn-reset" @click="resetSearch">Làm mới</button>
       </div>
     </div>
 
@@ -54,34 +54,76 @@
       </thead>
 
       <tbody>
-        <tr>
-          <td>1</td>
-          <td>Lập trình Java</td>
-          <td>Nguyễn Văn A</td>
-          <td>CNTT</td>
-          <td>2022</td>
-          <td><span class="status-available">Còn sách</span></td>
-          <td><button class="btn-borrow">Mượn sách</button></td>
-        </tr>
+        <template v-for="(book, index) in list_books" :key="index">
+          <tr>
+            <td>{{ index + 1 }}</td>
+            <td>{{ book.title }}</td>
+            <td>{{ book.author_name }}</td>
+            <td>{{ book.category_name }}</td>
+            <td>{{ book.publication_year }}</td>
+            <td>
+              <span v-if="book.stock_text == 'Còn sách'" class="status-available">Còn sách</span>
+              <span v-else class="status-unavailable">Hết sách</span>
+            </td>
+            <td>
+              <button class="btn-borrow" v-if="book.is_available == true">Mượn sách</button>
+              <button class="btn-borrow" v-if="book.is_available == false" disabled>Không khả dụng</button>
 
-        <tr>
-          <td>2</td>
-          <td>Văn học Việt Nam</td>
-          <td>Trần B</td>
-          <td>Văn học</td>
-          <td>2020</td>
-          <td><span class="status-unavailable">Hết sách</span></td>
-          <td><button class="btn-borrow" disabled>Không khả dụng</button></td>
-        </tr>
+            </td>
+          </tr>
+        </template>
       </tbody>
     </table>
   </div>
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
-    
-}
+  data() {
+    return {
+      searchParams: {
+        title: '',
+        author: '',
+        category_id: '',
+        publication_year: ''
+      },
+      list_books: [],
+      list_category: [],
+    }
+  },
+  mounted() {
+    this.getCategory();
+  },
+  methods: {
+    getCategory() {
+      axios.get('http://127.0.0.1:8000/api/librarian/category/get-data')
+        .then(res => {
+          this.list_category = res.data.data;
+        });
+    },
+    searchBooks() {
+      // Gọi API tìm kiếm sách với searchParams
+      axios.post('http://127.0.0.1:8000/api/student/books/search', this.searchParams)
+        .then(response => {
+          this.list_books = response.data.data; // Giả sử API trả về mảng sách trong data
+        })
+        .catch(error => {
+          console.error('Lỗi khi tìm kiếm sách:', error);
+        });
+    },
+    resetSearch() {
+      this.searchParams = {
+        title: '',
+        author: '',
+        category_id: '',
+        publication_year: ''
+      };
+    }
+  }
+
+};
 </script>
 
 <style scoped>
@@ -136,7 +178,7 @@ export default {
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 600;
-  cursor: pointer;  
+  cursor: pointer;
 }
 
 .btn-search:hover {
